@@ -111,28 +111,6 @@ class ValueIterationAgent(ValueEstimationAgent):
           terminal state, you should return None.
         """
         "*** YOUR CODE HERE ***"
-        """
-        actions = self.mdp.getPossibleActions(state)
-        if (len(actions) == 0):
-            return None
-        
-        values = {}
-        for action in actions:
-            values[action] = []
-        for action in actions:
-            stateAndProb = self.mdp.getTransitionStatesAndProbs(state, action)
-            for newState, _prob in stateAndProb:
-                values[action].append(self.values[newState])
-            tempValues = []
-            for newState, prob in stateAndProb:
-                reward = self.mdp.getReward(state, action, newState)
-                tempValues.append(prob*(reward + self.discount*self.values[state]))
-            values.append(sum(tempValues))
-
-        
-        index = values.index(max(values))
-        return actions[index]
-        """
         actions = self.mdp.getPossibleActions(state)
         if (len(actions) == 0):
             return None
