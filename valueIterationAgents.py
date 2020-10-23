@@ -62,40 +62,6 @@ class ValueIterationAgent(ValueEstimationAgent):
     def runValueIteration(self):
         # Write value iteration code here
         "*** YOUR CODE HERE ***"
-        """
-        i = 0
-        while (i < self.iterations):
-            states = self.mdp.getStates()
-            scores = []
-            for state in states:
-                actions = self.mdp.getPossibleActions(state)
-                actionStates = {}
-                for action in actions:
-                    states, probabilities = actionStates[action].append(mdp.getTransitionStatesAndProbs(state, action))
-                    rewards = []
-                    for newState in states:
-                        rewards.append((state, action, newState, mdp.getReward(state, action, nextState)))
-                    scores.append(sum(probabilities*(rewards+self.discount*value[states])))
-                self.values[state] = max(scores)
-            i += 1
-        i = 0
-        while (i < self.iterations):
-            states = self.mdp.getStates()
-            for state in states:
-                actions = self.mdp.getPossibleActions(state)
-                values = []
-                for action in actions:
-                    stateAndProb = self.mdp.getTransitionStatesAndProbs(state, action)
-                    tempValues = []
-                    for newState, prob in stateAndProb:
-                        reward = self.mdp.getReward(state, action, newState)
-                        tempValues.append(prob*(reward + self.discount*self.values[state]))
-                    values.append(sum(tempValues))
-                if (self.mdp.isTerminal(state)):
-                    self.values[state] = 0
-                else:
-                    self.values[state] = max(values)
-        """
         currentValues = util.Counter()
         i = 0
         for i in range(i, self.iterations):
