@@ -202,53 +202,50 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
         predecessors = {}
         states = self.mdp.getStates()
         for state in states:
-            predecessors[state] = []
+            predecessors[state] = set()
         for state in states:
-            actions = self.mdp.getPossibleActions(state)
-            for action in actions:
-                stateAndProb = self.mdp.getTransitionStatesAndProbs(state, action)
-                for successorState, _prob in stateAndProb:
-                    if(state not in predecessors[successorState]):
-                        predecessors[successorState].append(state)
+            if (not self.mdp.isTerminal(state)):
+                actions = self.mdp.getPossibleActions(state)
+                for action in actions:
+                    stateAndProb = self.mdp.getTransitionStatesAndProbs(state, action)
+                    for successorState, prob in stateAndProb:
+                        if(prob > 0):
+                            predecessors[successorState].add(state)
 
         queue = PriorityQueue()
         for state in states:
-            if (self.mdp.isTerminal(state)):
-                continue
-            actions = self.mdp.getPossibleActions(state)
-            qValues = []
-            for action in actions:
-                qValue = 0 
-                stateAndProb = self.mdp.getTransitionStatesAndProbs(state, action)
-                for newState, prob in stateAndProb:
-                    qValue += prob*(self.mdp.getReward(state, action, newState) + self.discount * self.values[newState])
-                qValues.append(qValue)
-            diff = abs(self.values[state] - max(qValues))
-            queue.push((state, max(qValues)), -diff)
-        
-        i = 0
-        while i < self.iterations and not queue.isEmpty():
-            state, value = queue.pop()
-            if (self.mdp.isTerminal(state)):
-                i += 1
-                continue
-            self.values[state] = value
-            currentValues = self.values.copy()
-            for predecessor in predecessors[state]:
-                if (self.mdp.isTerminal(predecessor)):
-                    continue
-                actions = self.mdp.getPossibleActions(predecessor)
+            if (not self.mdp.isTerminal(state)):
+                actions = self.mdp.getPossibleActions(state)
                 qValues = []
                 for action in actions:
-                    qValue = 0 
-                    stateAndProb = self.mdp.getTransitionStatesAndProbs(predecessor, action)
-                    for newState, prob in stateAndProb:
-                        qValue += prob*(self.mdp.getReward(predecessor, action, newState) + self.discount * currentValues[newState])
-                    qValues.append(qValue)
-                diff = abs(self.values[predecessor] - max(qValues))
-                if diff > self.theta:
-                    queue.update((predecessor, max(qValues)), -diff)
-            i += 1
+                    qValues.append(self.computeQValueFromValues(state, action))
+                diff = abs(self.values[state] - max(qValues))
+                queue.push(state, -diff)
+        
+        i = 0
+        for i in range(self.iterations):
+            if (queue.isEmpty()):
+                break
+            state = queue.pop()
+            if (not self.mdp.isTerminal(state)):
+                actionTemp = self.computeActionFromValues(state)
+                value = self.computeQValueFromValues(state, actionTemp)
+                self.values[state] = value
+                for predecessor in predecessors[state]:
+                    if (self.mdp.isTerminal(predecessor)):
+                        continue
+                    actions = self.mdp.getPossibleActions(predecessor)
+                    qValues = []
+                    for action in actions:
+                        qValue = 0 
+                        stateAndProb = self.mdp.getTransitionStatesAndProbs(predecessor, action)
+                        for newState, prob in stateAndProb:
+                            qValue += prob*(self.mdp.getReward(predecessor, action, newState) + self.discount * self.values[newState])
+                        qValues.append(qValue)
+                    diff = abs(self.values[predecessor] - max(qValues))
+                    if diff > self.theta:
+                        queue.update(predecessor, -diff)
+                i += 1
 """
 currentValues = util.Counter()
         i = 0
