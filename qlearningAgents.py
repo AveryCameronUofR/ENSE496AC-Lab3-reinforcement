@@ -73,6 +73,7 @@ class QLearningAgent(ReinforcementAgent):
         qValues = []
         for action in actions:
           qValues.append(self.getQValue(state, action))
+        #return max qValue for state
         return max(qValues)
 
 
@@ -89,6 +90,7 @@ class QLearningAgent(ReinforcementAgent):
         qValues = []
         for action in actions:
           qValues.append(self.getQValue(state, action))
+        #compute best action from max qValue 
         return actions[qValues.index(max(qValues))]
 
     def getAction(self, state):
@@ -107,6 +109,7 @@ class QLearningAgent(ReinforcementAgent):
         action = None
         "*** YOUR CODE HERE ***"
         action = self.computeActionFromQValues(state)
+        #for q7 epsilon is non 0, there is a change to do a random action instead of best
         randomAction = util.flipCoin(self.epsilon)
         if (randomAction):
           return random.choice(legalActions)
@@ -124,6 +127,7 @@ class QLearningAgent(ReinforcementAgent):
         "*** YOUR CODE HERE ***"
         #based on https://blog.floydhub.com/an-introduction-to-q-learning-reinforcement-learning/
         # Qt-1 + alphaTDt(a,s)
+        #if alpha = 0.4 0.6*oldQvalue + 0.4*(reward+discount*value)
         qValue = self.getQValue(state, action)
         oldQValue = (1-self.alpha)*qValue
         qValue = oldQValue + self.alpha *(reward+self.discount*self.getValue(nextState))
@@ -190,16 +194,27 @@ class ApproximateQAgent(PacmanQAgent):
           where * is the dotProduct operator
         """
         "*** YOUR CODE HERE ***"
-        diff = self.re self.discount *    - self.weights
-        return self.weights[(state, action)] = self.weights[(state, action)] + self.alpha * self.featExtractor[(state, action)]
-
+        #feature Extractor has a get feature function, returns a dict
+        features =  self.featExtractor.getFeatures(state, action)
+        qValue = 0
+        #qValue = sum(i,n) f(state,action)*w
+        #iterate through the dict and multiply corresponding value and weight together
+        for featureStateAction,featureValue in features.items():
+          qValue += featureValue*self.weights[featureStateAction]
+        return qValue
+        
     def update(self, state, action, nextState, reward):
         """
            Should update your weights based on transition
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-
+        features =  self.featExtractor.getFeatures(state, action)
+        #difference = reward+discount *maxQ(nextState, action) - currentQValue(stat,e action)
+        diff = (reward + self.discount * self.getValue(nextState)) - self.getQValue(state, action)
+        #newWeight(state,action) = oldWeight(state,action)+alpha*difference*feature(state,action)
+        for featureStateAction,featureValue in features.items():
+          self.weights[featureStateAction] = self.weights[featureStateAction] + self.alpha*diff*featureValue
+  
     def final(self, state):
         "Called at the end of each game."
         # call the super-class final method
@@ -208,5 +223,4 @@ class ApproximateQAgent(PacmanQAgent):
         # did we finish training?
         if self.episodesSoFar == self.numTraining:
             # you might want to print your weights here for debugging
-            "*** YOUR CODE HERE ***"
             pass
