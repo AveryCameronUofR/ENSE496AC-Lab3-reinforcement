@@ -62,28 +62,20 @@ class ValueIterationAgent(ValueEstimationAgent):
     def runValueIteration(self):
         # Write value iteration code here
         "*** YOUR CODE HERE ***"
-        currentValues = util.Counter()
         i = 0
         for i in range(i, self.iterations):
-            #copy current values (won't be updated and can be used for qValues)
-            currentValues = self.values.copy()
+            #copy current values (won't be updated and can use for qValues)
+            newValues = self.values.copy()
             states = self.mdp.getStates()
             for state in states:
                 if self.mdp.isTerminal(state):
                     self.values[state] = 0
                     continue
                 else:
-                    actions = self.mdp.getPossibleActions(state)
-                    qValues = []
-                    for action in actions:
-                        qValue = 0 
-                        stateAndProb = self.mdp.getTransitionStatesAndProbs(state, action)
-                        for newState, prob in stateAndProb:
-                            #use currentValues instead of updatedValues (self.values) for calculations
-                            qValue += prob*(self.mdp.getReward(state, action, newState) + self.discount * currentValues[newState])
-                        qValues.append(qValue)
-                    self.values[state] = max(qValues)
-            i+=1
+                    maxAction = self.computeActionFromValues(state)
+                    qValue = self.computeQValueFromValues(state, maxAction)
+                    newValues[state] = qValue
+            self.values = newValues
         
     def getValue(self, state):
         """
@@ -117,7 +109,7 @@ class ValueIterationAgent(ValueEstimationAgent):
         """
         "*** YOUR CODE HERE ***"
         actions = self.mdp.getPossibleActions(state)
-        if (len(actions) == 0):
+        if (self.mdp.isTerminal(state)):
             return None
         values = []
         for action in actions:
@@ -166,7 +158,6 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
         i = 0
         #only update one state per iteration
         for i in range(i, self.iterations):
-            currentValues = self.values.copy()
             states = self.mdp.getStates()
             #Check which state to update
             index = i%len(states)
@@ -174,18 +165,9 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
             if self.mdp.isTerminal(state):
                 self.values[state] = 0
                 continue
-
-            #calculate the qValues for the possible actions for the state 
-            actions = self.mdp.getPossibleActions(state)
-            qValues = []
-            for action in actions:
-                qValue = 0 
-                stateAndProb = self.mdp.getTransitionStatesAndProbs(state, action)
-                for newState, prob in stateAndProb:
-                    qValue += prob*(self.mdp.getReward(state, action, newState) + self.discount * currentValues[newState])
-                qValues.append(qValue)
-            #update value with max qValue
-            self.values[state] = max(qValues)
+            maxAction = self.computeActionFromValues(state)
+            qValue = self.computeQValueFromValues(state, maxAction)
+            self.values[state]  = qValue
             i+=1
 
 class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
@@ -221,11 +203,12 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
                     for successorState, prob in stateAndProb:
                         if(prob > 0):
                             predecessors[successorState].add(state)
-        #initialize Empty Priority Queue
-        queue = PriorityQueue()
+
+        #initialize Empty Priority priorityQueue
+        priorityQueue = PriorityQueue()
         #For each state
         #Find the absValue of diff between current state value and max qValue
-        #Push state into priQueue with -diff (minimizing queue)
+        #Push state into priorityQueue with -diff (minimizing priorityQueue)
         for state in states:
             if (not self.mdp.isTerminal(state)):
                 actions = self.mdp.getPossibleActions(state)
@@ -233,20 +216,19 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
                 for action in actions:
                     qValues.append(self.computeQValueFromValues(state, action))
                 diff = abs(self.values[state] - max(qValues))
-                queue.push(state, -diff)
+                priorityQueue.push(state, -diff)
         
         #for every iteration
-        #check if queue is empty, return
-        #pop state off of Queue and update value for that state
+        #check if priorityQueue is empty, return
+        #pop state off of priorityQueue and update value for that state
         #for each predecessor of the state
         #Find the absValue of diff between current state value and max qValue
-        #if diff > theta Push state into priQueue with -diff (minimizing queue)
+        #if diff > theta Push state into priorityQueue with -diff (minimizing priorityQueue)
         
-        i = 0
-        for i in range(self.iterations):
-            if (queue.isEmpty()):
+        for _ in range(self.iterations):
+            if (priorityQueue.isEmpty()):
                 break
-            state = queue.pop()
+            state = priorityQueue.pop()
             if (not self.mdp.isTerminal(state)):
                 actionTemp = self.computeActionFromValues(state)
                 value = self.computeQValueFromValues(state, actionTemp)
@@ -257,12 +239,7 @@ class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
                     actions = self.mdp.getPossibleActions(predecessor)
                     qValues = []
                     for action in actions:
-                        qValue = 0 
-                        stateAndProb = self.mdp.getTransitionStatesAndProbs(predecessor, action)
-                        for newState, prob in stateAndProb:
-                            qValue += prob*(self.mdp.getReward(predecessor, action, newState) + self.discount * self.values[newState])
-                        qValues.append(qValue)
+                        qValues.append(self.computeQValueFromValues(predecessor, action))
                     diff = abs(self.values[predecessor] - max(qValues))
                     if diff > self.theta:
-                        queue.update(predecessor, -diff)
-                i += 1
+                        priorityQueue.update(predecessor, -diff)
